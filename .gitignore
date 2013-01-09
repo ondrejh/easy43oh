@@ -6,3 +6,5 @@
 msp430sht.txt
 test/serselect
 test/serselect/*
+msp430easy.hex
+msp430easy.txt

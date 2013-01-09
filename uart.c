@@ -36,17 +36,15 @@
 #define UART_TX_BUFLEN 16
 #define UART_TX_BUFMASK 0x0F
 
-#define CHANNELS 2
-unsigned int debug_value[CHANNELS] = {0,0};
-
 // uart circular buffer
 char uart_tx_buffer[UART_TX_BUFLEN]={'\0'};
 unsigned int uart_tx_inptr=0, uart_tx_outptr=0;
 // uart transmit flag (0 not transmitting, 1 transmitting)
 bool uart_tx_transmitt = false;
 
-// local function definition
+// local functions definition
 int uart_start_tx(void);
+char h2c(unsigned int h);
 
 // implementation section
 
@@ -55,18 +53,6 @@ char h2c(unsigned int h)
 	unsigned int hx = h&0xF;
 	if (hx<0xA) return ('0'+hx);
 	return ('A'+hx-10);
-}
-
-void set_debug_value(unsigned int value, unsigned int channel)
-{
-	if (channel>=CHANNELS) return;
-	debug_value[channel] = value;
-}
-
-unsigned int get_debug_value(unsigned int channel)
-{
-	if (channel>=CHANNELS) return 0;
-	return (debug_value[channel]);
 }
 
 // uart initialization
@@ -139,20 +125,7 @@ __interrupt void USCI0RX_ISR(void)
 {
 	UART_TX_LED_ON();
 	char c = UCA0RXBUF;		// read char
-	if (c=='?')
-	{
-		int i;
-		for (i=0;i<CHANNELS;i++)
-		{
-			uart_putc(h2c(debug_value[i]>>12));
-			uart_putc(h2c(debug_value[i]>>8));
-			uart_putc(h2c(debug_value[i]>>4));
-			uart_putc(h2c(debug_value[i]));
-			if (i!=(CHANNELS-1)) uart_putc(',');
-		}
-		uart_putc('\n');
-		//uart_puts("Hello World!\n");
-	}
+	if (c=='?')	uart_puts("Hello World!\n");
 }
 
 // uart TX interrupt handler

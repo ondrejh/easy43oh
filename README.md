@@ -1,8 +1,5 @@
-msp430_sht11_lib
-================
+msp430_easydriver
+=================
 
-sht11 library for MSP430 (launchpad) with example usage
+Easydriver (http://www.schmalzhaus.com/EasyDriver/index.html) module for MSP430 (launchpad).
 Repo contains c code files, makefile and codeblocks project file.
-
-Library files (files of importance): sht11.c sht11.h
-

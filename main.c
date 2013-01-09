@@ -1,14 +1,8 @@
 //******************************************************************************
-// Launchpad test application. SHT11 sensor module
+// Launchpad test application. EasyDriver stepper motor module
 //
 // author: Ondrej Hejda
-// date:   22.8.2012
-//
-// used TI demos:
-//   MSP430G2xx3 Demo - USCI_A0, 9600 UART Echo ISR, DCO SMCLK
-//   MSP430G2xx3 Demo - P1 Interrupt from LPM4 with Internal Pull-up
-//   MSP430G2xx3 Demo - Timer_A, Toggle P1.0, CCR0 Cont. Mode ISR, DCO SMCLK
-//   ...
+// date:   9.1.2013
 //
 // hardware: MSP430G2553 (launchpad)
 //
@@ -18,14 +12,17 @@
 //          | |                 |
 //          --|RST          XOUT|-
 //            |                 |
-//            |           P1.1,2|--> UART (debug output 9.6kBaud)
+//            |           P1.1,2| --> UART (debug output 9.6kBaud)
 //            |                 |
-//            |             P1.0|--> RED LED (active high)
-//            |             P1.6|--> GREEN LED (active high)
-//            |                 |                                     -------
-//            |             P2.0|<-> SHT DATA <-----------pullup---->| SHT11 |
-//            |             P2.1|--> SHT SCK -------------pullup---->|       |
-//            |                 |                                     -------
+//            |             P1.0| --> RED LED (active high)
+//            |             P1.6| --> GREEN LED (active high)
+//            |                 |
+//            |                 |      - easydriver -
+//            |             P2.0| --> | STEP         |
+//            |             P2.1| --> | DIRECTION    | - /4/ - motor
+//            |             P2.2| --> | SLEEP        |
+//            |                 |      --------------
+//            |                 |
 
 //******************************************************************************
 
@@ -34,8 +31,6 @@
 // include section
 #include <msp430g2553.h>
 #include "timer.h"
-#include "sht11.h"
-#include "sht11con.h"
 
 #ifdef DEBUG
 #include "uart.h"
@@ -50,6 +45,18 @@
 #define LED_GREEN_OFF() {P1OUT&=~0x40;}
 #define LED_GREEN_SWAP() {P1OUT^=0x40;}
 
+// motor output pins
+#define MOTOR_SLEEP_PIN 2
+#define MOTOR_DIR_PIN 1
+#define MOTOR_STEP_PIN 0
+// motor defines
+#define MOTOR_INIT() {P2DIR|=0x07;P2OUT&=~0x07;}
+#define MOTOR_SLEEP() {P2OUT&=~(1<<MOTOR_SLEEP_PIN);}
+#define MOTOR_AWAKE() {P2OUT|=(1<<MOTOR_SLEEP_PIN);}
+#define MOTOR_DIR_FWD() {P2OUT|=(1<<MOTOR_DIR_PIN);}
+#define MOTOR_DIR_BCK() {P2OUT&=~(1<<MOTOR_DIR_PIN);}
+#define MOTOR_STEP() {P2OUT|=(1<<MOTOR_STEP_PIN);P2OUT&=~(1<<MOTOR_STEP_PIN);}
+
 // hw depended init
 void board_init(void)
 {
@@ -57,6 +64,7 @@ void board_init(void)
 	BCSCTL1 = CALBC1_1MHZ;		// Set DCO
 	DCOCTL = CALDCO_1MHZ;
 
+    MOTOR_INIT(); // motor
 	LED_INIT(); // leds
 }
 
@@ -67,28 +75,16 @@ int main(void)
 
 	board_init(); 	// init oscilator and leds
 	timer_init(); 	// init timer
-	sht11_init(); 	// init sht sensor
 
-	#ifdef DEBUG
-	uart_init(); // init debug interface
-	set_debug_value(0x0,0);	// store value for debug interface
-	set_debug_value(0x0,1);
-	#endif
+	uart_init(); // init uart interface
+
+    LED_GREEN_ON();
+    MOTOR_DIR_FWD();
+    MOTOR_AWAKE();
 
 	while(1)
 	{
-		unsigned int Tval,Hval;
-		int TvalC,HvalC;
-		LED_GREEN_ON();
-		if ((sht_measure_check(&Tval,TEMP)==0) && (sht_measure_check(&Hval,HUMI)==0))
-		{
-			sht2int(Tval,Hval,&TvalC,&HvalC);
-			#ifdef DEBUG
-			set_debug_value(int2bcd(TvalC),0);
-			set_debug_value(int2bcd(HvalC),1);
-			#endif
-		}
-	    LED_GREEN_OFF();
+	    MOTOR_STEP();
 		__bis_SR_register(CPUOFF + GIE); // enter sleep mode (leave on timer interrupt)
 	}
 

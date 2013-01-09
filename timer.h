@@ -17,8 +17,8 @@
 #ifndef __TIMER_H__
 #define __TIMER_H__
 
-// timer interval (1ms / 1MHz osc / fosc/8)
-#define TIMER_INTERVAL 125
+// timer interval (0.1ms / 8MHz osc / fosc/8)
+#define TIMER_INTERVAL 100
 
 void timer_init(void);
 

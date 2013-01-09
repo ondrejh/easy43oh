@@ -61,10 +61,10 @@
 void board_init(void)
 {
 	// oscillator
-	BCSCTL1 = CALBC1_1MHZ;		// Set DCO
-	DCOCTL = CALDCO_1MHZ;
+	BCSCTL1 = CALBC1_8MHZ; // Set DCO
+	DCOCTL  = CALDCO_8MHZ;
 
-    MOTOR_INIT(); // motor
+    MOTOR_INIT(); // motor outputs
 	LED_INIT(); // leds
 }
 
@@ -79,12 +79,12 @@ int main(void)
 	uart_init(); // init uart interface
 
     LED_GREEN_ON();
-    MOTOR_DIR_FWD();
-    MOTOR_AWAKE();
+    //MOTOR_DIR_FWD();
+    //MOTOR_AWAKE();
 
 	while(1)
 	{
-	    MOTOR_STEP();
+	    //MOTOR_STEP();
 		__bis_SR_register(CPUOFF + GIE); // enter sleep mode (leave on timer interrupt)
 	}
 

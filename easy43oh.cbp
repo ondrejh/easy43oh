@@ -25,6 +25,10 @@
 		</Compiler>
 		<Unit filename="Makefile" />
 		<Unit filename="README.md" />
+		<Unit filename="easydrv.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="easydrv.h" />
 		<Unit filename="main.c">
 			<Option compilerVar="CC" />
 		</Unit>

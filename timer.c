@@ -19,6 +19,8 @@
 // self
 #include "timer.h"
 
+uint16_t timer_tick = 0;
+
 // timer init
 void timer_init(void)
 {
@@ -32,5 +34,6 @@ void timer_init(void)
 __interrupt void Timer_A (void)
 {
 	CCR0 += TIMER_INTERVAL;				// Add Offset to CCR0
-    //__bic_SR_register_on_exit(CPUOFF);        // Clear CPUOFF bit from 0(SR)
+	ticks++;
+    __bic_SR_register_on_exit(CPUOFF);        // Clear CPUOFF bit from 0(SR)
 }

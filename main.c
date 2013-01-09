@@ -31,10 +31,8 @@
 // include section
 #include <msp430g2553.h>
 #include "timer.h"
-
-#ifdef DEBUG
 #include "uart.h"
-#endif
+#include "easydrv.h"
 
 // board (leds, button)
 #define LED_INIT() {P1DIR|=0x41;P1OUT&=~0x41;}
@@ -44,18 +42,6 @@
 #define LED_GREEN_ON() {P1OUT|=0x40;}
 #define LED_GREEN_OFF() {P1OUT&=~0x40;}
 #define LED_GREEN_SWAP() {P1OUT^=0x40;}
-
-// motor output pins
-#define MOTOR_SLEEP_PIN 2
-#define MOTOR_DIR_PIN 1
-#define MOTOR_STEP_PIN 0
-// motor defines
-#define MOTOR_INIT() {P2DIR|=0x07;P2OUT&=~0x07;}
-#define MOTOR_SLEEP() {P2OUT&=~(1<<MOTOR_SLEEP_PIN);}
-#define MOTOR_AWAKE() {P2OUT|=(1<<MOTOR_SLEEP_PIN);}
-#define MOTOR_DIR_FWD() {P2OUT|=(1<<MOTOR_DIR_PIN);}
-#define MOTOR_DIR_BCK() {P2OUT&=~(1<<MOTOR_DIR_PIN);}
-#define MOTOR_STEP() {P2OUT|=(1<<MOTOR_STEP_PIN);P2OUT&=~(1<<MOTOR_STEP_PIN);}
 
 // hw depended init
 void board_init(void)
@@ -74,17 +60,24 @@ int main(void)
 	WDTCTL = WDTPW + WDTHOLD;	// Stop WDT
 
 	board_init(); 	// init oscilator and leds
-	timer_init(); 	// init timer
+
+	init_motor(&motor); // init motor context
+	timer_init(); // init timer
 
 	uart_init(); // init uart interface
 
-    LED_GREEN_ON();
-    //MOTOR_DIR_FWD();
-    //MOTOR_AWAKE();
+    motor.sleep=false;
+    motor.speed=-SPEED_MAX/10;
 
 	while(1)
 	{
-	    //MOTOR_STEP();
+	    if (ticks!=0) // timer issue
+	    {
+	        ticks--;
+
+	        move_motor(&motor);
+	    }
+
 		__bis_SR_register(CPUOFF + GIE); // enter sleep mode (leave on timer interrupt)
 	}
 

@@ -8,3 +8,5 @@ test/serselect
 test/serselect/*
 msp430easy.hex
 msp430easy.txt
+easy43oh.cbp.cbTemp
+easy43oh.layout.cbTemp

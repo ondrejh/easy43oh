@@ -17,8 +17,12 @@
 #ifndef __TIMER_H__
 #define __TIMER_H__
 
+#include <inttypes.h>
+
 // timer interval (0.1ms / 8MHz osc / fosc/8)
 #define TIMER_INTERVAL 100
+
+uint16_t ticks;
 
 void timer_init(void);
 

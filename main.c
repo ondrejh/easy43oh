@@ -61,13 +61,15 @@ int main(void)
 
 	board_init(); 	// init oscilator and leds
 
-	init_motor(&motor); // init motor context
 	timer_init(); // init timer
 
 	uart_init(); // init uart interface
 
-    motor.sleep=false;
-    motor.speed=-SPEED_MAX/10;
+    t_motor motor; // init motor context
+	motor_init(&motor);
+
+    // test
+    motor_run(&motor,SPEED_MAX/16);
 
 	while(1)
 	{
@@ -75,7 +77,7 @@ int main(void)
 	    {
 	        ticks--;
 
-	        move_motor(&motor);
+	        motor_move(&motor);
 	    }
 
 		__bis_SR_register(CPUOFF + GIE); // enter sleep mode (leave on timer interrupt)

@@ -45,8 +45,12 @@ typedef struct
     int16_t step_cnt;
 } t_motor;
 
-t_motor motor;
-void init_motor(t_motor *motor);
-void move_motor(t_motor *motor);
+void motor_init(t_motor *motor);
+
+void motor_run(t_motor *motor, int16_t speed);
+void motor_stop(t_motor *motor);
+void motor_sleep(t_motor *motor);
+
+void motor_move(t_motor *motor);
 
 #endif

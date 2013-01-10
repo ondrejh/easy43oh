@@ -43,6 +43,13 @@
 #define LED_GREEN_OFF() {P1OUT&=~0x40;}
 #define LED_GREEN_SWAP() {P1OUT^=0x40;}
 
+// buttons
+#define LPAD_BTN_PIN 3
+#define BUTTONS_INIT() {P1DIR&=~(1<<LPAD_BTN_PIN);P1REN|=(1<<LPAD_BTN_PIN);}
+#define LPAD_BTN ((P1IN&(1<<LPAD_BTN_PIN))==0)
+
+#define SLEEP_TIMEOUT 20000
+
 // hw depended init
 void board_init(void)
 {
@@ -52,11 +59,15 @@ void board_init(void)
 
     MOTOR_INIT(); // motor outputs
 	LED_INIT(); // leds
+	BUTTONS_INIT(); // buttons
 }
 
 // main program body
 int main(void)
 {
+    int16_t seqv = -1;
+    uint16_t sleep_timer = 0;
+
 	WDTCTL = WDTPW + WDTHOLD;	// Stop WDT
 
 	board_init(); 	// init oscilator and leds
@@ -69,13 +80,70 @@ int main(void)
 	motor_init(&motor);
 
     // test
-    motor_run(&motor,SPEED_MAX/16);
+    while(!LPAD_BTN){};
+    motor_goto(&motor,8*200,SPEED_MAX/16);
 
 	while(1)
 	{
-	    if (ticks!=0) // timer issue
+	    // sequential
+	    switch (seqv)
+	    {
+	        case -1: // sleep
+                if (LPAD_BTN)
+                {
+                    sleep_timer = SLEEP_TIMEOUT;
+                    seqv++;
+                }
+                break;
+	        case 0: // wait button (forward)
+                if (LPAD_BTN)
+                {
+                    motor_goto(&motor,8*200,SPEED_MAX/16);
+                    seqv++;
+                }
+                if (sleep_timer==0)
+                {
+                    motor_sleep(&motor);
+                    seqv=-1;
+                }
+                break;
+            case 1: // wait until forward run done
+                if (motor_atposition(&motor))
+                {
+                    sleep_timer = SLEEP_TIMEOUT;
+                    seqv++;
+                }
+                break;
+            case 2: // wait button (backward)
+                if (LPAD_BTN)
+                {
+                    motor_goto(&motor,-8*200,SPEED_MAX/4);
+                    seqv++;
+                }
+                if (sleep_timer==0)
+                {
+                    motor_sleep(&motor);
+                    seqv=-1;
+                }
+                break;
+            case 3: // wait until backward run done
+                if (motor_atposition(&motor))
+                {
+                    sleep_timer = SLEEP_TIMEOUT;
+                    seqv=0;
+                }
+                break;
+            default:
+                seqv=0;
+                break;
+	    }
+
+	    // timer issue
+	    while (ticks!=0)
 	    {
 	        ticks--;
+
+	        if (sleep_timer) sleep_timer--;
 
 	        motor_move(&motor);
 	    }

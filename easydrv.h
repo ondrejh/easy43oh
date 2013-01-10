@@ -41,17 +41,29 @@ typedef struct
     int16_t speed;
     int32_t position;
 
+    // goto position variables
+    bool gotoen;
+    int32_t gotopos;
+
     // internal variables
     int16_t step_cnt;
     bool sleeping;
 } t_motor;
 
+/// motor context initialization and position reset
 void motor_init(t_motor *motor);
+void motor_reset(t_motor *motor);
 
+/// motor goto function (start and done)
+void motor_goto(t_motor *motor, int32_t position, uint16_t speed);
+bool motor_atposition(t_motor *motor);
+
+/// basic functions (run, stop, sleep)
 void motor_run(t_motor *motor, int16_t speed);
 void motor_stop(t_motor *motor);
 void motor_sleep(t_motor *motor);
 
+/// main polling funtion (should be called periodically)
 void motor_move(t_motor *motor);
 
 #endif

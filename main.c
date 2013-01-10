@@ -43,12 +43,31 @@
 #define LED_GREEN_OFF() {P1OUT&=~0x40;}
 #define LED_GREEN_SWAP() {P1OUT^=0x40;}
 
-// buttons
+// button pins
 #define LPAD_BTN_PIN 3
-#define BUTTONS_INIT() {P1DIR&=~(1<<LPAD_BTN_PIN);P1REN|=(1<<LPAD_BTN_PIN);}
+#define FWD_BTN_PIN 4
+#define BCK_BTN_PIN 5
+#define FRONT_SW_PIN 3
+#define REAR_SW_PIN 4
+// buttons init
+#define BUTTONS_INIT() {P1DIR&=~((1<<LPAD_BTN_PIN)|(1<<FWD_BTN_PIN)|(1<<BCK_BTN_PIN));\
+                        P1OUT|=((1<<LPAD_BTN_PIN)|(1<<FWD_BTN_PIN)|(1<<BCK_BTN_PIN));\
+                        P1REN|=((1<<LPAD_BTN_PIN)|(1<<FWD_BTN_PIN)|(1<<BCK_BTN_PIN));\
+                        P2DIR&=~((1<<FRONT_SW_PIN)|(1<<REAR_SW_PIN));\
+                        P2REN|=((1<<FRONT_SW_PIN)|(1<<REAR_SW_PIN));}
+// button input functions
 #define LPAD_BTN ((P1IN&(1<<LPAD_BTN_PIN))==0)
+#define FWD_BTN  ((P1IN&(1<<FWD_BTN_PIN))!=0)
+#define BCK_BTN  ((P1IN&(1<<BCK_BTN_PIN))!=0)
+#define FRONT_SW ((P2IN&(1<<FRONT_SW_PIN))==0)
+#define REAR_SW  ((P2IN&(1<<REAR_SW_PIN))==0)
 
+// timeout for motor goto sleep mode [ticks]
 #define SLEEP_TIMEOUT 20000
+
+#define SEQV_SLEEP -1
+#define SEQV_WAIT_BTN 0
+#define SEQV_RUN_FORWARD 1
 
 // hw depended init
 void board_init(void)
@@ -80,8 +99,8 @@ int main(void)
 	motor_init(&motor);
 
     // test
-    while(!LPAD_BTN){};
-    motor_goto(&motor,8*200,SPEED_MAX/16);
+    //while(!LPAD_BTN){};
+    //motor_goto(&motor,8*200,SPEED_MAX/16);
 
 	while(1)
 	{
@@ -89,45 +108,38 @@ int main(void)
 	    switch (seqv)
 	    {
 	        case -1: // sleep
-                if (LPAD_BTN)
+                if ((FWD_BTN)||(BCK_BTN))
                 {
                     sleep_timer = SLEEP_TIMEOUT;
                     seqv++;
                 }
                 break;
-	        case 0: // wait button (forward)
-                if (LPAD_BTN)
+	        case 0: // wait button (forward or backward)
+                if (FWD_BTN)
                 {
-                    motor_goto(&motor,8*200,SPEED_MAX/16);
+                    motor_run(&motor,SPEED_MAX/8);
                     seqv++;
                 }
-                if (sleep_timer==0)
+                else if (BCK_BTN)
+                {
+                    motor_run(&motor,-SPEED_MAX/8);
+                    seqv++;
+                }
+                else if (sleep_timer==0)
                 {
                     motor_sleep(&motor);
-                    seqv=-1;
+                    seqv--;
                 }
                 break;
-            case 1: // wait until forward run done
-                if (motor_atposition(&motor))
-                {
-                    sleep_timer = SLEEP_TIMEOUT;
-                    seqv++;
-                }
-                break;
-            case 2: // wait button (backward)
+            case 1: // run
                 if (LPAD_BTN)
                 {
-                    motor_goto(&motor,-8*200,SPEED_MAX/4);
+                    motor_stop(&motor);
                     seqv++;
                 }
-                if (sleep_timer==0)
-                {
-                    motor_sleep(&motor);
-                    seqv=-1;
-                }
                 break;
-            case 3: // wait until backward run done
-                if (motor_atposition(&motor))
+            case 2: // wait released
+                if ((!LPAD_BTN)&&(!BCK_BTN)&&(!FWD_BTN))
                 {
                     sleep_timer = SLEEP_TIMEOUT;
                     seqv=0;

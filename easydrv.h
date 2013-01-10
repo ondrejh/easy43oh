@@ -52,10 +52,11 @@ typedef struct
 
 /// motor context initialization and position reset
 void motor_init(t_motor *motor);
-void motor_reset(t_motor *motor);
+void motor_reset(t_motor *motor, int32_t position);
 
 /// motor goto function (start and done)
 void motor_goto(t_motor *motor, int32_t position, uint16_t speed);
+void motor_gotorel(t_motor *motor, int32_t position, uint16_t speed);
 bool motor_atposition(t_motor *motor);
 
 /// basic functions (run, stop, sleep)

@@ -44,6 +44,15 @@ void motor_goto(t_motor *motor, int32_t position, uint16_t speed)
     else motor_run(motor,-speed);
 }
 
+/// relative goto function start
+void motor_gotorel(t_motor *motor, int32_t position, uint16_t speed)
+{
+    motor->gotopos=motor->position+position;
+    motor->gotoen=true;
+    if (motor->position<motor->gotopos) motor_run(motor,speed);
+    else motor_run(motor,-speed);
+}
+
 /// set motor speed
 void motor_run(t_motor *motor, int16_t speed)
 {
@@ -64,9 +73,9 @@ void motor_sleep(t_motor *motor)
 }
 
 /// reset motor position
-void motor_reset(t_motor *motor)
+void motor_reset(t_motor *motor, int32_t position)
 {
-    motor->position = 0;
+    motor->position = position;
 }
 
 /// periodically called motor function (to connect to some timer)

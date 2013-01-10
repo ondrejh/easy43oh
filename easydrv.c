@@ -23,6 +23,7 @@ void motor_init(t_motor *motor)
     motor->position=0;
 
     motor->step_cnt=0;
+    motor->sleeping=true;
 }
 
 /// set motor speed
@@ -49,35 +50,47 @@ void motor_move(t_motor *motor)
 {
     if (motor->sleep)
     {
-        MOTOR_SLEEP_SET();
-        MOTOR_LED_OFF();
+        if (!motor->sleeping)
+        {
+            MOTOR_SLEEP_SET();
+            MOTOR_LED_OFF();
 
-        motor->speed=0;
-        motor->position=0;
-        motor->step_cnt=0;
+            motor->speed=0;
+            motor->position=0;
+            motor->step_cnt=0;
+
+            motor->sleeping=true;
+        }
     }
     else
     {
-        MOTOR_SLEEP_RES();
-        MOTOR_LED_ON();
+        if (motor->sleeping)
+        {
+            MOTOR_SLEEP_RES();
+            MOTOR_LED_ON();
 
-        // move motor (according to speed variable)
-        motor->step_cnt+=motor->speed;
-        if (motor->step_cnt>=SPEED_MAX)
-        {
-            // step forward
-            MOTOR_DIR_FWD();
-            motor->step_cnt-=SPEED_MAX;
-            motor->position++;
-            MOTOR_STEP();
+            motor->sleeping=false;
         }
-        else if (motor->step_cnt<=-SPEED_MAX)
+        else
         {
-            // step back
-            MOTOR_DIR_BCK();
-            motor->step_cnt+=SPEED_MAX;
-            motor->position--;
-            MOTOR_STEP();
+            // move motor (according to speed variable)
+            motor->step_cnt+=motor->speed;
+            if (motor->step_cnt>=SPEED_MAX)
+            {
+                // step forward
+                MOTOR_DIR_FWD();
+                motor->step_cnt-=SPEED_MAX;
+                motor->position++;
+                MOTOR_STEP();
+            }
+            else if (motor->step_cnt<=-SPEED_MAX)
+            {
+                // step back
+                MOTOR_DIR_BCK();
+                motor->step_cnt+=SPEED_MAX;
+                motor->position--;
+                MOTOR_STEP();
+            }
         }
     }
 }

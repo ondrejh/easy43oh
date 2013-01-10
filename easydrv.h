@@ -43,6 +43,7 @@ typedef struct
 
     // internal variables
     int16_t step_cnt;
+    bool sleeping;
 } t_motor;
 
 void motor_init(t_motor *motor);

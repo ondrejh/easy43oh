@@ -64,11 +64,12 @@
 #define SLEEP_TIMEOUT 20000 // 2s
 #define BUTTON_RELEASE_TIMEOUT 1000 // 100ms
 
-#define SEQV_SLEEP -1
-#define SEQV_WAIT_BTN 0
-#define SEQV_RUN_FORWARD 1
-#define SEQV_RUN_BACKWARD 2
-#define SEQV_WAIT_BTN_RELEASE 3
+// sequentinal state definitions
+#define SEQV_SLEEP            -1
+#define SEQV_WAIT_BTN          0
+#define SEQV_RUN_FORWARD       1
+#define SEQV_RUN_BACKWARD      2
+#define SEQV_WAIT_BTN_RELEASE  3
 
 // hw depended init
 void board_init(void)

@@ -8,8 +8,8 @@
 //
 //                MSP4302553
 //             -----------------
-//         /|\|              XIN|-
-//          | |                 |
+//        /|\ |                 |
+//         |  |              XIN|-
 //          --|RST          XOUT|-
 //            |                 |
 //            |           P1.1,2| --> UART (debug output 9.6kBaud)
@@ -22,6 +22,10 @@
 //            |             P2.1| --> | DIRECTION    | - /4/ - motor
 //            |             P2.2| --> | SLEEP        |
 //            |                 |      --------------
+//            |                 |
+//            |             P2.3| --> BUTTON STOP
+//            |             P2.4| --> BUTTON FORWARD
+//            |             P2.5| --> BUTTON BACKWARD
 //            |                 |
 
 //******************************************************************************
@@ -44,30 +48,27 @@
 #define LED_GREEN_SWAP() {P1OUT^=0x40;}
 
 // button pins
-#define LPAD_BTN_PIN 3
-#define FWD_BTN_PIN 4
-#define BCK_BTN_PIN 5
-#define FRONT_SW_PIN 3
-#define REAR_SW_PIN 4
+#define BTN_STOP_PIN 3
+#define BTN_FORWARD_PIN 4
+#define BTN_BACKWARD_PIN 5
 // buttons init
-#define BUTTONS_INIT() {P1DIR&=~((1<<LPAD_BTN_PIN)|(1<<FWD_BTN_PIN)|(1<<BCK_BTN_PIN));\
-                        P1OUT|=((1<<LPAD_BTN_PIN)|(1<<FWD_BTN_PIN)|(1<<BCK_BTN_PIN));\
-                        P1REN|=((1<<LPAD_BTN_PIN)|(1<<FWD_BTN_PIN)|(1<<BCK_BTN_PIN));\
-                        P2DIR&=~((1<<FRONT_SW_PIN)|(1<<REAR_SW_PIN));\
-                        P2REN|=((1<<FRONT_SW_PIN)|(1<<REAR_SW_PIN));}
+#define BUTTONS_INIT() {P2DIR&=~((1<<BTN_STOP_PIN)|(1<<BTN_FORWARD_PIN)|(1<<BTN_BACKWARD_PIN));\
+                        P2OUT|=((1<<BTN_STOP_PIN)|(1<<BTN_FORWARD_PIN)|(1<<BTN_BACKWARD_PIN));\
+                        P2REN|=((1<<BTN_STOP_PIN)|(1<<BTN_FORWARD_PIN)|(1<<BTN_BACKWARD_PIN));}
 // button input functions
-#define LPAD_BTN ((P1IN&(1<<LPAD_BTN_PIN))==0)
-#define FWD_BTN  ((P1IN&(1<<FWD_BTN_PIN))!=0)
-#define BCK_BTN  ((P1IN&(1<<BCK_BTN_PIN))!=0)
-#define FRONT_SW ((P2IN&(1<<FRONT_SW_PIN))==0)
-#define REAR_SW  ((P2IN&(1<<REAR_SW_PIN))==0)
+#define BTN_STOP     ((P2IN&(1<<BTN_STOP_PIN))==0)
+#define BTN_FORWARD  ((P2IN&(1<<BTN_FORWARD_PIN))==0)
+#define BTN_BACKWARD ((P2IN&(1<<BTN_BACKWARD_PIN))==0)
 
 // timeout for motor goto sleep mode [ticks]
-#define SLEEP_TIMEOUT 20000
+#define SLEEP_TIMEOUT 20000 // 2s
+#define BUTTON_RELEASE_TIMEOUT 1000 // 100ms
 
 #define SEQV_SLEEP -1
 #define SEQV_WAIT_BTN 0
 #define SEQV_RUN_FORWARD 1
+#define SEQV_RUN_BACKWARD 2
+#define SEQV_WAIT_BTN_RELEASE 3
 
 // hw depended init
 void board_init(void)
@@ -85,7 +86,7 @@ void board_init(void)
 int main(void)
 {
     int16_t seqv = -1;
-    uint16_t sleep_timer = 0;
+    uint16_t main_timer = 0;
 
 	WDTCTL = WDTPW + WDTHOLD;	// Stop WDT
 
@@ -98,50 +99,56 @@ int main(void)
     t_motor motor; // init motor context
 	motor_init(&motor);
 
-    // test
-    //while(!LPAD_BTN){};
-    //motor_goto(&motor,8*200,SPEED_MAX/16);
-
+    // main loop
 	while(1)
 	{
 	    // sequential
 	    switch (seqv)
 	    {
-	        case -1: // sleep
-                if ((FWD_BTN)||(BCK_BTN))
+	        case SEQV_SLEEP: // sleep
+                if ((BTN_FORWARD)||(BTN_BACKWARD))
                 {
-                    sleep_timer = SLEEP_TIMEOUT;
+                    main_timer = SLEEP_TIMEOUT;
                     seqv++;
                 }
                 break;
-	        case 0: // wait button (forward or backward)
-                if (FWD_BTN)
+	        case SEQV_WAIT_BTN: // wait button (forward or backward)
+                if (BTN_FORWARD)
                 {
                     motor_run(&motor,SPEED_MAX/8);
-                    seqv++;
+                    seqv=1;
                 }
-                else if (BCK_BTN)
+                else if (BTN_BACKWARD)
                 {
                     motor_run(&motor,-SPEED_MAX/8);
-                    seqv++;
+                    seqv=2;
                 }
-                else if (sleep_timer==0)
+                else if (main_timer==0)
                 {
                     motor_sleep(&motor);
                     seqv--;
                 }
                 break;
-            case 1: // run
-                if (LPAD_BTN)
+            case SEQV_RUN_FORWARD: // run forward
+                if (BTN_STOP||BTN_BACKWARD)
                 {
                     motor_stop(&motor);
-                    seqv++;
+                    main_timer = BUTTON_RELEASE_TIMEOUT;
+                    seqv=3;
                 }
                 break;
-            case 2: // wait released
-                if ((!LPAD_BTN)&&(!BCK_BTN)&&(!FWD_BTN))
+            case SEQV_RUN_BACKWARD: // run backward
+                if (BTN_STOP||BTN_FORWARD)
                 {
-                    sleep_timer = SLEEP_TIMEOUT;
+                    motor_stop(&motor);
+                    main_timer = BUTTON_RELEASE_TIMEOUT;
+                    seqv=3;
+                }
+                break;
+            case SEQV_WAIT_BTN_RELEASE: // wait buttons released (min untill timeout)
+                if ((!BTN_STOP)&&(!BTN_FORWARD)&&(!BTN_BACKWARD)&&(main_timer==0))
+                {
+                    main_timer = SLEEP_TIMEOUT;
                     seqv=0;
                 }
                 break;
@@ -155,7 +162,7 @@ int main(void)
 	    {
 	        ticks--;
 
-	        if (sleep_timer) sleep_timer--;
+	        if (main_timer) main_timer--;
 
 	        motor_move(&motor);
 	    }

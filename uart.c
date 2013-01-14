@@ -16,9 +16,10 @@
 #include <stdbool.h>
 
 #include "uart.h"
+#include "adc.h"
 
 // uart TX led
-#define UART_TX_LED 1
+#define UART_TX_LED 0
 #if UART_TX_LED==1
 	// TX led port 1 pin 0, active high
 	#define UART_TX_LED_INIT() {P1DIR|=0x01;UART_TX_LED_OFF();}
@@ -127,7 +128,21 @@ __interrupt void USCI0RX_ISR(void)
 {
 	UART_TX_LED_ON();
 	char c = UCA0RXBUF;		// read char
-	if (c=='?')	uart_puts("Hello World!\n");
+	if (c=='?')	//uart_puts("Hello World!\n");
+	{
+	    uint16_t i = read_adc(0);
+	    uart_putc(h2c(i>>12));
+	    uart_putc(h2c(i>>12));
+	    uart_putc(h2c(i>>12));
+	    uart_putc(h2c(i>>12));
+	    uart_putc(',');
+	    i = read_adc(1);
+	    uart_putc(h2c(i>>12));
+	    uart_putc(h2c(i>>12));
+	    uart_putc(h2c(i>>12));
+	    uart_putc(h2c(i>>12));
+	    uart_putc('\n');
+	}
 }
 
 // uart TX interrupt handler

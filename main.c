@@ -27,6 +27,9 @@
 //            |             P2.4| --> BUTTON FORWARD
 //            |             P2.5| --> BUTTON BACKWARD
 //            |                 |
+//            |       P1.4(ADC4)| <-- V supply
+//            |       P1.5(ADC5)| <-- V output
+//            |                 |
 
 //******************************************************************************
 
@@ -37,6 +40,7 @@
 #include "timer.h"
 #include "uart.h"
 #include "easydrv.h"
+#include "adc.h"
 
 // board (leds, button)
 #define LED_INIT() {P1DIR|=0x41;P1OUT&=~0x41;}
@@ -93,6 +97,8 @@ int main(void)
 
 	board_init(); 	// init oscilator and leds
 
+	adc_init();
+
 	timer_init(); // init timer
 
 	uart_init(); // init uart interface
@@ -103,6 +109,10 @@ int main(void)
     // main loop
 	while(1)
 	{
+	    // test adc
+	    //if (read_adc(0)<(read_adc(1)/4)) {LED_RED_ON();}
+	    //else {LED_RED_OFF();}
+
 	    // sequential
 	    switch (seqv)
 	    {

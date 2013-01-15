@@ -14,6 +14,10 @@
 #ifndef UART_H_
 #define UART_H_
 
+#include <inttypes.h>
+
+uint16_t AdcVal;
+
 void uart_init(void); // initialization
 int uart_putc(char c); // put char function
 int uart_puts(char *s); // put string function

@@ -7,11 +7,12 @@
 #define __ADC_H__
 
 #include <inttypes.h>
+#include <stdbool.h>
 
-// read buffer function
-uint16_t read_adc(uint8_t chnl);
+void restart_adc(uint8_t channel);
 
-// module initialization
-void adc_init(void);
+void start_adc(uint8_t channel);
+bool adc_done(void);
+uint16_t read_adc(void);
 
 #endif

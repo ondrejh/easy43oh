@@ -37,6 +37,7 @@
 
 // include section
 #include <msp430g2553.h>
+#include <inttypes.h>
 #include "timer.h"
 #include "uart.h"
 #include "easydrv.h"
@@ -97,8 +98,6 @@ int main(void)
 
 	board_init(); 	// init oscilator and leds
 
-	adc_init();
-
 	timer_init(); // init timer
 
 	uart_init(); // init uart interface
@@ -106,12 +105,15 @@ int main(void)
     t_motor motor; // init motor context
 	motor_init(&motor);
 
+	start_adc(4);
+
     // main loop
 	while(1)
 	{
 	    // test adc
 	    //if (read_adc(0)<(read_adc(1)/4)) {LED_RED_ON();}
 	    //else {LED_RED_OFF();}
+	    if (adc_done()) {AdcVal = read_adc(); restart_adc(4);}
 
 	    // sequential
 	    switch (seqv)

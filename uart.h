@@ -16,7 +16,7 @@
 
 #include <inttypes.h>
 
-uint16_t AdcVal[2];
+void set_adc_val(uint8_t chnl, uint16_t val);
 
 void uart_init(void); // initialization
 int uart_putc(char c); // put char function

@@ -51,6 +51,11 @@ char h2c(unsigned int h);
 
 // implementation section
 
+void set_adc_val(uint8_t chnl, uint16_t val)
+{
+    AdcVal[chnl]=val;
+}
+
 char h2c(unsigned int h)
 {
 	unsigned int hx = h&0xF;

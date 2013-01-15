@@ -38,6 +38,7 @@
 // include section
 #include <msp430g2553.h>
 #include <inttypes.h>
+//#include <stdbool.h>
 #include "timer.h"
 #include "uart.h"
 #include "easydrv.h"
@@ -88,9 +89,46 @@ void board_init(void)
 	BUTTONS_INIT(); // buttons
 }
 
+// test if output is clamped high or low
+int8_t evaluate_analog_input(void)
+{
+    int8_t last_eval = 0;
+
+    uint16_t Vpos = get_adc(0);
+    uint16_t Vout = get_adc(1);
+
+    uint16_t THold = Vpos/4;
+    uint16_t Hyst = 5;
+
+    switch (last_eval)
+    {
+        case -1:
+            if (Vout>(THold+Hyst))
+            {
+                if (Vout>(Vpos-THold+Hyst)) last_eval = 1;
+                else last_eval = 0;
+            }
+            break;
+        case 0:
+            if (Vout<(THold-Hyst)) last_eval = -1;
+            else if (Vout>(Vpos-THold+Hyst)) last_eval = 1;
+            break;
+        case 1:
+            if (Vout<(Vpos-THold-Hyst))
+            {
+                if (Vout<(THold-Hyst)) last_eval = -1;
+                else last_eval = 0;
+            }
+            break;
+    }
+
+    return last_eval;
+}
+
 // main program body
 int main(void)
 {
+    int8_t analog_eval = 0;
     int16_t seqv = -1;
     uint16_t main_timer = 0;
 
@@ -111,11 +149,13 @@ int main(void)
     // main loop
 	while(1)
 	{
-	    // test adc
+	    // read and evaluate adc input
 	    if (adc_ready())
 	    {
-	        AdcVal[0] = get_adc(0);
-	        AdcVal[1] = get_adc(1);
+	        analog_eval = evaluate_analog_input();
+            if (analog_eval==0) {LED_RED_OFF();} else {LED_RED_ON();}
+	        set_adc_val(0,get_adc(0));
+	        set_adc_val(1,get_adc(1));
 	        start_adc();
         }
 

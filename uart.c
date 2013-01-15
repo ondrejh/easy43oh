@@ -37,7 +37,7 @@
 #define UART_TX_BUFLEN 16
 #define UART_TX_BUFMASK 0x0F
 
-uint16_t AdcVal = 0;
+uint16_t AdcVal[2] = {0,0};
 
 // uart circular buffer
 char uart_tx_buffer[UART_TX_BUFLEN]={'\0'};
@@ -132,7 +132,13 @@ __interrupt void USCI0RX_ISR(void)
 	char c = UCA0RXBUF;		// read char
 	if (c=='?')	//uart_puts("Hello World!\n");
 	{
-	    uint16_t i = AdcVal;
+	    uint16_t i = AdcVal[0];
+	    uart_putc(h2c(i>>12));
+	    uart_putc(h2c(i>>8));
+	    uart_putc(h2c(i>>4));
+	    uart_putc(h2c(i>>0));
+	    uart_putc(',');
+	    i = AdcVal[1];
 	    uart_putc(h2c(i>>12));
 	    uart_putc(h2c(i>>8));
 	    uart_putc(h2c(i>>4));

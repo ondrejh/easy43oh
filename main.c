@@ -105,15 +105,21 @@ int main(void)
     t_motor motor; // init motor context
 	motor_init(&motor);
 
-	start_adc(4);
+	init_adc();
+	uint16_t nextadc = 4;
+	nextadc^=0x0001;
+	start_adc(nextadc);
 
     // main loop
 	while(1)
 	{
 	    // test adc
-	    //if (read_adc(0)<(read_adc(1)/4)) {LED_RED_ON();}
-	    //else {LED_RED_OFF();}
-	    if (adc_done()) {AdcVal = read_adc(); restart_adc(4);}
+	    if (adc_done())
+	    {
+	        AdcVal[nextadc&0x0001] = read_adc();//|(nextadc<<12);
+	        nextadc^=0x0001;
+	        start_adc(nextadc);
+        }
 
 	    // sequential
 	    switch (seqv)

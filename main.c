@@ -106,19 +106,17 @@ int main(void)
 	motor_init(&motor);
 
 	init_adc();
-	uint16_t nextadc = 4;
-	nextadc^=0x0001;
-	start_adc(nextadc);
+	start_adc();
 
     // main loop
 	while(1)
 	{
 	    // test adc
-	    if (adc_done())
+	    if (adc_ready())
 	    {
-	        AdcVal[nextadc&0x0001] = read_adc();//|(nextadc<<12);
-	        nextadc^=0x0001;
-	        start_adc(nextadc);
+	        AdcVal[0] = get_adc(0);
+	        AdcVal[1] = get_adc(1);
+	        start_adc();
         }
 
 	    // sequential

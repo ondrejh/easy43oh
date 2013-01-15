@@ -9,10 +9,10 @@
 #include <inttypes.h>
 #include <stdbool.h>
 
-void start_adc(uint16_t channel);
+void start_adc(void);
+bool adc_ready(void);
+uint16_t get_adc(uint8_t chnl);
 
 void init_adc(void);
-bool adc_done(void);
-uint16_t read_adc(void);
 
 #endif

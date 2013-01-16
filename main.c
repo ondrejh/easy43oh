@@ -23,9 +23,12 @@
 //            |             P2.2| --> | SLEEP        |
 //            |                 |      --------------
 //            |                 |
-//            |             P2.3| --> BUTTON STOP
-//            |             P2.4| --> BUTTON FORWARD
-//            |             P2.5| --> BUTTON BACKWARD
+//            |             P2.3| <-- BUTTON STOP      (all connecting gnd)
+//            |             P2.4| <-- BUTTON FORWARD
+//            |             P2.5| <-- BUTTON BACKWARD
+//            |                 |
+//            |             P2.6| <-- FRONT END SWITCH (both connecting gnd)
+//            |             P2.7| <-- REAR END SWITCH
 //            |                 |
 //            |       P1.4(ADC4)| <-- V supply
 //            |       P1.5(ADC5)| <-- V output
@@ -54,8 +57,8 @@
 #define LED_GREEN_SWAP() {P1OUT^=0x40;}
 
 // button pins
-#define BTN_STOP_PIN 3
-#define BTN_FORWARD_PIN 4
+#define BTN_STOP_PIN     3
+#define BTN_FORWARD_PIN  4
 #define BTN_BACKWARD_PIN 5
 // buttons init
 #define BUTTONS_INIT() {P2DIR&=~((1<<BTN_STOP_PIN)|(1<<BTN_FORWARD_PIN)|(1<<BTN_BACKWARD_PIN));\
@@ -65,6 +68,18 @@
 #define BTN_STOP     ((P2IN&(1<<BTN_STOP_PIN))==0)
 #define BTN_FORWARD  ((P2IN&(1<<BTN_FORWARD_PIN))==0)
 #define BTN_BACKWARD ((P2IN&(1<<BTN_BACKWARD_PIN))==0)
+
+// end switch
+#define ENDSW_FRONT_PIN 6
+#define ENDSW_REAR_PIN  7
+// end switch initialization
+#define ENDSW_INIT() {P2DIR&=~((1<<ENDSW_FRONT_PIN)|(1<<ENDSW_REAR_PIN));\
+                      P2SEL&=~((1<<ENDSW_FRONT_PIN)|(1<<ENDSW_REAR_PIN));\
+                      P2OUT|=((1<<ENDSW_FRONT_PIN)|(1<<ENDSW_REAR_PIN));\
+                      P2REN|=((1<<ENDSW_FRONT_PIN)|(1<<ENDSW_REAR_PIN));}
+// end switch input funcitons
+#define ENDSW_FRONT ((P2IN&(1<<ENDSW_FRONT_PIN))==0)
+#define ENDSW_REAR  ((P2IN&(1<<ENDSW_REAR_PIN))==0)
 
 // timeout for motor goto sleep mode [ticks]
 #define SLEEP_TIMEOUT 20000 // 2s
@@ -77,6 +92,11 @@
 #define SEQV_RUN_BACKWARD      2
 #define SEQV_WAIT_BTN_RELEASE  3
 
+// analog input status
+#define ANIN_LOW -1
+#define ANIN_OPEN 0
+#define ANIN_HIGH 1
+
 // hw depended init
 void board_init(void)
 {
@@ -84,9 +104,10 @@ void board_init(void)
 	BCSCTL1 = CALBC1_8MHZ; // Set DCO
 	DCOCTL  = CALDCO_8MHZ;
 
-    MOTOR_INIT(); // motor outputs
-	LED_INIT(); // leds
+    MOTOR_INIT();   // motor outputs
+	LED_INIT();     // leds
 	BUTTONS_INIT(); // buttons
+	ENDSW_INIT();   // end switch
 }
 
 // test if output is clamped high or low
@@ -102,22 +123,28 @@ int8_t evaluate_analog_input(void)
 
     switch (last_eval)
     {
-        case -1:
+        case ANIN_LOW:
             if (Vout>(THold+Hyst))
             {
-                if (Vout>(Vpos-THold+Hyst)) last_eval = 1;
-                else last_eval = 0;
+                if (Vout>(Vpos-THold+Hyst))
+                    last_eval = ANIN_HIGH;
+                else
+                    last_eval = ANIN_OPEN;
             }
             break;
-        case 0:
-            if (Vout<(THold-Hyst)) last_eval = -1;
-            else if (Vout>(Vpos-THold+Hyst)) last_eval = 1;
+        case ANIN_OPEN:
+            if (Vout<(THold-Hyst))
+                last_eval = ANIN_LOW;
+            else if (Vout>(Vpos-THold+Hyst))
+                last_eval = ANIN_HIGH;
             break;
-        case 1:
+        case ANIN_HIGH:
             if (Vout<(Vpos-THold-Hyst))
             {
-                if (Vout<(THold-Hyst)) last_eval = -1;
-                else last_eval = 0;
+                if (Vout<(THold-Hyst))
+                    last_eval = ANIN_LOW;
+                else
+                    last_eval = ANIN_OPEN;
             }
             break;
     }
@@ -132,19 +159,18 @@ int main(void)
     int16_t seqv = -1;
     uint16_t main_timer = 0;
 
+    t_motor motor; // motor context
+
+
 	WDTCTL = WDTPW + WDTHOLD;	// Stop WDT
 
-	board_init(); 	// init oscilator and leds
 
-	timer_init(); // init timer
-
-	uart_init(); // init uart interface
-
-    t_motor motor; // init motor context
-	motor_init(&motor);
-
-	init_adc();
-	start_adc();
+	board_init();       // init oscilator and leds
+	timer_init();       // init timer
+	uart_init();        // init uart interface
+	motor_init(&motor); // init motor context
+	init_adc();         // init adc
+	start_adc();        // start first conversion
 
     // main loop
 	while(1)
@@ -170,12 +196,12 @@ int main(void)
                 }
                 break;
 	        case SEQV_WAIT_BTN: // wait button (forward or backward)
-                if (BTN_FORWARD)
+                if (BTN_FORWARD && (!ENDSW_FRONT))
                 {
                     motor_run(&motor,SPEED_MAX/8);
                     seqv=1;
                 }
-                else if (BTN_BACKWARD)
+                else if (BTN_BACKWARD && (!ENDSW_REAR))
                 {
                     motor_run(&motor,-SPEED_MAX/8);
                     seqv=2;
@@ -187,7 +213,7 @@ int main(void)
                 }
                 break;
             case SEQV_RUN_FORWARD: // run forward
-                if (BTN_STOP||BTN_BACKWARD)
+                if (BTN_STOP||BTN_BACKWARD||ENDSW_FRONT)
                 {
                     motor_stop(&motor);
                     main_timer = BUTTON_RELEASE_TIMEOUT;
@@ -195,7 +221,7 @@ int main(void)
                 }
                 break;
             case SEQV_RUN_BACKWARD: // run backward
-                if (BTN_STOP||BTN_FORWARD)
+                if (BTN_STOP||BTN_FORWARD||ENDSW_REAR)
                 {
                     motor_stop(&motor);
                     main_timer = BUTTON_RELEASE_TIMEOUT;

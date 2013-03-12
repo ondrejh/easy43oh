@@ -159,6 +159,8 @@ int main(void)
     int16_t seqv = -1;
     uint16_t main_timer = 0;
 
+    int8_t analog_eval_onstart = 0;
+
     t_motor motor; // motor context
 
 
@@ -198,12 +200,14 @@ int main(void)
 	        case SEQV_WAIT_BTN: // wait button (forward or backward)
                 if (BTN_FORWARD && (!ENDSW_FRONT))
                 {
-                    motor_run(&motor,SPEED_MAX/8);
+                    analog_eval_onstart = analog_eval;
+                    motor_run(&motor,SPEED_MAX/4);
                     seqv=1;
                 }
                 else if (BTN_BACKWARD && (!ENDSW_REAR))
                 {
-                    motor_run(&motor,-SPEED_MAX/8);
+                    analog_eval_onstart = analog_eval;
+                    motor_run(&motor,-SPEED_MAX/4);
                     seqv=2;
                 }
                 else if (main_timer==0)
@@ -213,7 +217,7 @@ int main(void)
                 }
                 break;
             case SEQV_RUN_FORWARD: // run forward
-                if (BTN_STOP||BTN_BACKWARD||ENDSW_FRONT)
+                if (BTN_STOP||BTN_BACKWARD||ENDSW_FRONT||(analog_eval!=analog_eval_onstart))
                 {
                     motor_stop(&motor);
                     main_timer = BUTTON_RELEASE_TIMEOUT;
@@ -221,7 +225,7 @@ int main(void)
                 }
                 break;
             case SEQV_RUN_BACKWARD: // run backward
-                if (BTN_STOP||BTN_FORWARD||ENDSW_REAR)
+                if (BTN_STOP||BTN_FORWARD||ENDSW_REAR||(analog_eval!=analog_eval_onstart))
                 {
                     motor_stop(&motor);
                     main_timer = BUTTON_RELEASE_TIMEOUT;
